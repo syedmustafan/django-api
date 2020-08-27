@@ -1,0 +1,137 @@
+Dependancies Versions Used:
+
+Django==2.0.5
+mysqlclient==1.3.12
+djangorestframework==3.11.1
+pymysql==0.10.0
+
+After Installing all the dependancies, activate your virtualenv.
+
+After that create your project using following command: 
+django-admin.py startproject api
+
+then move into the project: 
+cd api
+
+then create a django app:
+django-admin.py startapp music
+
+Your structure of project will look like this:
+api/
+	manage.py
+	api/
+		__init__.py
+		settings.py
+		urls.py
+		wsgi.py
+	music/
+		migrations/
+		__init__.py
+		__init__.py
+		admin.py
+		apps.py
+		models.py
+		tests.py
+		views.py
+	venv/
+
+
+Now you have to sync your database for the first time:
+python manage.py migrate
+
+Create your super user for admin panel:
+python manage.py createsuperuser --email admin@example.com --username admin
+
+
+
+Add these in your api/settings.py:
+INSTALLED_APPS = [
+'rest_framework',
+'music'
+]
+
+Now add urls for your music app:
+from django.contrib import admin
+from django.urls import path, include
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('music.urls'))
+]
+
+Now we will create a get songs/ endpoint:
+
+in the music/model.py file we will create table ‘Song’ table using following:
+
+
+from django.db import models
+
+
+class Songs(models.Model):
+    # song title
+    title = models.CharField(max_length=255, null=False)
+    # name of artist or group/band
+    artist = models.CharField(max_length=255, null=False)
+
+    def __str__(self):
+        return "{} - {}".format(self.title, self.artist)
+
+We have to register our model in music/admin.py file to use in admin section of our project. Add the following lines.
+from django.contrib import admin
+from .models import Songs
+
+admin.site.register(Songs)
+
+After that make migrations to check changes in the admin panel
+
+Now we have to create serializers to convert model instances to python native data types like JSON or xml.
+
+Create a file serializers.py in music app and add the following code:
+
+from rest_framework import serializers
+from .models import Songs
+
+
+class SongsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Songs
+        fields = ("title", "artist")
+
+Finally we will be creating views to return all songs. Add the following code in music/views.py:
+
+from rest_framework import generics
+from .models import Songs
+from .serializers import SongsSerializer
+
+
+class ListSongsView(generics.ListAPIView):
+    """
+    Provides a get method handler.
+    """
+    queryset = Songs.objects.all()
+    serializer_class = SongsSerializer
+
+Also add in api/urls.py:
+
+
+from django.contrib import admin
+from django.urls import path, re_path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    re_path('api/(?P<version>(v1|v2))/', include('music.urls'))
+]
+Add the following in music/urls.py:
+from django.urls import path
+from .views import ListSongsView
+
+
+urlpatterns = [
+    path('songs/', ListSongsView.as_view(), name="songs-all")
+]
+
+Now time to test the apis:
+
+Open the admin panel using : http://127.0.0.1:8000/admin
+Add songs in the admin panel.
+
+Lastly, use the endpoint http://127.0.0.1:8000/api/v1/songs to see results. 
